@@ -61,14 +61,14 @@ rome = undefined
 
 ------------------------------------------------------------------------------
 --Auxiliary function that checks if a city is connected to all of the other cities. It verifies if it as the same number of adjacent cities as the total number of cities in the graph - 1 (i.e, minus itself)
-isConnectedToAll :: RoadMap -> City -> [City] -> Bool
-isConnectedToAll graph city cityList = length (adjacent graph city) == length cityList - 1
+isConnectedToAll :: RoadMap -> City -> Bool
+isConnectedToAll graph city = length (adjacent graph city) == length (cities graph) - 1
 
 --Auxiliary function that transverses the list of cities present in the graph and checks if every city is reachable from the others
 isStronglyConnectedAux :: RoadMap -> [City] -> Bool
 isStronglyConnectedAux _ [] = True --checked every city and they are all reachable from the other cities
 isStronglyConnectedAux graph cityList
-    | isConnectedToAll graph city cityList = isStronglyConnectedAux graph (tail cityList)
+    | isConnectedToAll graph city  = isStronglyConnectedAux graph (tail cityList)
     | otherwise = False
     where city = head cityList
 
