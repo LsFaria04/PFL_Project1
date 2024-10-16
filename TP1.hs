@@ -46,6 +46,7 @@ distance :: RoadMap -> City -> City -> Maybe Distance
 distance graph city1 city2
     | null graph = Nothing
     | city1 == c1 && city2 == c2 = Just dist
+    | city2 == c1 && city1 == c2 = Just dist 
     | otherwise = distance (tail graph) city1 city2 
     where (c1,c2,dist) = head graph
 
