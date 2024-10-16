@@ -1,4 +1,9 @@
+{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 import qualified Data.List
+import Foreign (nullPtr)
+import Data.Maybe (isJust)
+import Data.Type.Bool (Not)
+import Distribution.Simple.Program.HcPkg (list)
 --import qualified Data.Array
 --import qualified Data.Bits
 
@@ -38,8 +43,11 @@ areAdjacent graph city1 city2
 
 -------------------------------------------------------------------------------
 distance :: RoadMap -> City -> City -> Maybe Distance
-distance = undefined
-
+distance graph city1 city2
+    | null graph = Nothing
+    | city1 == c1 && city2 == c2 = Just dist
+    | otherwise = distance (tail graph) city1 city2 
+    where (c1,c2,dist) = head graph
 
 -------------------------------------------------------------------------------
 --finds all the adjacent cities to a particular city
@@ -52,12 +60,42 @@ adjacent graph city
     where (c1, c2, dist) = head graph
 
 ------------------------------------------------------------------------------
+
+--auxiliary function that accumulates the distance on the path
+pathDistanceAux :: Maybe Distance -> Maybe Distance -> Maybe Distance
+pathDistanceAux Nothing acc = acc
+pathDistanceAux dist Nothing = dist
+pathDistanceAux Nothing Nothing = Nothing
+pathDistanceAux (Just dist)  (Just acc) = Just (acc + dist)
+
+
 pathDistance :: RoadMap -> Path -> Maybe Distance
-pathDistance = undefined
+pathDistance [] _ = Nothing
+pathDistance _ [] = Nothing
+pathDistance graph path
+    | isJust dist = pathDistanceAux (pathDistance graph (tail path)) dist
+    | otherwise = Nothing 
+    where dist = distance graph (head path) (head (tail path))
 
 ------------------------------------------------------------------------------
+
+--Auxiliary function that pairs each city to the number of it´s adjacents
+cityAdjacent :: RoadMap -> [City] -> [(City,Int)] 
+cityAdjacent _ [] = []
+cityAdjacent graph listOfCities =  (head listOfCities , length(adjacent graph (head listOfCities))) : cityAdjacent graph (tail listOfCities) 
+
+--Auxiliary function that returns the cities with maximum adjacent length
+romeAux :: [(City,Int)] -> Int -> [City]
+romeAux [] _ = []
+romeAux cityDegree max 
+    | max == degree = cityname : romeAux (tail cityDegree) max
+    | otherwise =  romeAux (tail cityDegree) max
+    where (cityname,degree) = head cityDegree
+
+-- Returns the names of the cities with the highest number of roads connecting to them. It uses maximum to find the highest degree and then gets the cities with that degree
 rome :: RoadMap -> [City]
-rome = undefined
+rome [] = []
+rome graph = romeAux (cityAdjacent graph (cities graph)) (maximum (map snd (cityAdjacent graph (cities graph))))
 
 ------------------------------------------------------------------------------
 --Auxiliary function that checks if a city is connected to all of the other cities. It verifies if it as the same number of adjacent cities as the total number of cities in the graph - 1 (i.e, minus itself)
