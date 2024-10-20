@@ -1,11 +1,8 @@
 {-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 import qualified Data.List
-import Foreign (nullPtr)
-import Data.Maybe (isJust)
-import Data.Type.Bool (Not)
-import Distribution.Simple.Program.HcPkg (list)
---import qualified Data.Array
---import qualified Data.Bits
+import qualified Data.Array
+import qualified Data.Bits
+import Distribution.Simple.Setup (ReplOptions)
 
 -- PFL 2024/2025 Practical assignment 1
 
@@ -16,6 +13,10 @@ type Path = [City]
 type Distance = Int
 
 type RoadMap = [(City,City,Distance)]
+
+type AdjList = [(City,[(City,Distance)])]
+type AdjMatrix = Data.Array.Array (Int,Int) (Maybe Distance)
+data AdjPointers = Place City [(AdjPointers, Distance)]
 
 ------------------------------------------------------------------------------
 --auxiliary function that inserts the cities into the cities list but verifies first if they were already in it
@@ -46,8 +47,8 @@ distance :: RoadMap -> City -> City -> Maybe Distance
 distance graph city1 city2
     | null graph = Nothing
     | city1 == c1 && city2 == c2 = Just dist
-    | city2 == c1 && city1 == c2 = Just dist 
-    | otherwise = distance (tail graph) city1 city2 
+    | city2 == c1 && city1 == c2 = Just dist
+    | otherwise = distance (tail graph) city1 city2
     where (c1,c2,dist) = head graph
 
 -------------------------------------------------------------------------------
@@ -74,21 +75,22 @@ pathDistance :: RoadMap -> Path -> Maybe Distance
 pathDistance [] _ = Nothing
 pathDistance _ [] = Nothing
 pathDistance graph path
-    | isJust dist = pathDistanceAux (pathDistance graph (tail path)) dist
-    | otherwise = Nothing 
+    | length path == 1 = Nothing
+    | dist /= Nothing = pathDistanceAux (pathDistance graph (tail path)) dist
+    | otherwise = Nothing
     where dist = distance graph (head path) (head (tail path))
 
 ------------------------------------------------------------------------------
 
 --Auxiliary function that pairs each city to the number of it´s adjacents
-cityAdjacent :: RoadMap -> [City] -> [(City,Int)] 
+cityAdjacent :: RoadMap -> [City] -> [(City,Int)]
 cityAdjacent _ [] = []
-cityAdjacent graph listOfCities =  (head listOfCities , length(adjacent graph (head listOfCities))) : cityAdjacent graph (tail listOfCities) 
+cityAdjacent graph listOfCities =  (head listOfCities , length (adjacent graph (head listOfCities))) : cityAdjacent graph (tail listOfCities)
 
---Auxiliary function that returns the cities with maximum adjacent length
+--Auxiliary function that returns the cities with most degree
 romeAux :: [(City,Int)] -> Int -> [City]
 romeAux [] _ = []
-romeAux cityDegree max 
+romeAux cityDegree max
     | max == degree = cityname : romeAux (tail cityDegree) max
     | otherwise =  romeAux (tail cityDegree) max
     where (cityname,degree) = head cityDegree
@@ -111,13 +113,70 @@ isStronglyConnectedAux graph cityList
     | otherwise = False
     where city = head cityList
 
+    
 --Checks if a graph is strongly connected. p (i.e., if every city is reachable from every other city).
-isStronglyConnected :: RoadMap -> Bool         
+isStronglyConnected :: RoadMap -> Bool
 isStronglyConnected graph = isStronglyConnectedAux graph (cities graph)
-
 ------------------------------------------------------------------------------
+
+distanceInt :: RoadMap -> City -> City -> Distance
+distanceInt graph city1 city2
+    | null graph = 0
+    | city1 == c1 && city2 == c2 = dist
+    | city2 == c1 && city1 == c2 = dist
+    | otherwise = distanceInt (tail graph) city1 city2
+    where (c1,c2,dist) = head graph
+
+pathDistanceIntAux :: Distance -> Distance -> Distance
+pathDistanceIntAux 0 acc = acc
+pathDistanceIntAux dist 0 = dist
+pathDistanceIntAux 0 0 = 0
+pathDistanceIntAux dist acc = acc + dist
+
+
+pathDistanceInt :: RoadMap -> Path -> Int
+pathDistanceInt [] _ = 0
+pathDistanceInt _ [] = 0
+pathDistanceInt graph path  
+    | length path == 1 = 0
+    | dist /= 0 = pathDistanceIntAux (pathDistanceInt graph (tail path)) dist
+    | otherwise = 0
+    where dist = distanceInt graph (head path) (head (tail path))
+
+
+getMinCostPaths :: [(Path,Int)] -> Int -> [(Path,Int)]
+getMinCostPaths [] _ = []
+getMinCostPaths pathsWithCost minCost 
+    | minCost == cost = head pathsWithCost : getMinCostPaths (tail pathsWithCost) minCost
+    | otherwise = getMinCostPaths (tail pathsWithCost) minCost
+    where (path,cost) = head pathsWithCost
+
+calculatePathCost :: RoadMap -> [Path] -> [(Path,Int)]
+calculatePathCost _ [] = []
+calculatePathCost graph paths = (head paths , pathDistanceInt graph (head paths)) : calculatePathCost graph (tail paths)
+
+
+shortestPathAux :: RoadMap -> City -> City -> [City] -> Path -> [Path]
+shortestPathAux graph current dest visited path
+    | current == dest = [reverse (current:path)]  -- Base case: reached destination
+    | otherwise = concatMap explore neighbors  -- Explore all valid neighbors
+  where
+    neighbors = adjacent graph current  -- Get neighbors of the current city
+    explore (neighbor, _)
+        | neighbor `elem` visited = []  -- Prune if already visited
+        | otherwise = shortestPathAux graph neighbor dest (neighbor : visited) (current : path)
+        
+-- Main shortest path function
 shortestPath :: RoadMap -> City -> City -> [Path]
-shortestPath = undefined
+shortestPath _ [] [] = []
+shortestPath _ [] c2 = [[c2]]
+shortestPath _ c1 [] = [[c1]]
+shortestPath graph c1 c2
+    | areAdjacent graph c1 c2 = [[c1, c2]]  -- Directly adjacent case
+    | null pathsWithCost = []
+    | otherwise = map fst (getMinCostPaths pathsWithCost (minimum (map snd pathsWithCost)))
+    where pathsWithCost = calculatePathCost graph (shortestPathAux graph c1 c2 [c1] [] )
+------------------------------------------------------------------------------
 
 travelSales :: RoadMap -> Path
 travelSales = undefined
@@ -137,3 +196,11 @@ gTest3 = [("0","1",4),("2","3",2)]
 
 gTest4 :: RoadMap
 gTest4 = [("0","1",4),("2","3",2), ("0","2",1), ("0", "3", 1), ("1", "2", 1), ("1", "3", 1)]
+
+gTest5 :: RoadMap
+gTest5 = [
+    ("0","1",1),
+    ("1","2",1),
+    ("0","2",2),    -- Direct path from 0 to 2
+    ("2","3",1),
+    ("1","3",2)]
