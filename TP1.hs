@@ -232,7 +232,7 @@ createMaskMatrix :: RoadMap -> Int -> AdjMatrix
 createMaskMatrix graph len = Data.Array.array ((0, 0), (len - 1, maxMask)) [((i,j), -1) | i <- [0..(len-1)], j <- [0..maxMask] ]
     where maxMask = (1 `Data.Bits.shiftL` len) - 1 :: Int  -- maximum value a mask will have
 
--- Finds tha path with the minimum distance in the list
+-- Finds tha path with the minimum distance in the a list of paths and accumulated distances
 findMinPath :: [(AdjMatrix, Distance, Path)] -> (AdjMatrix, Distance, Path) -> (AdjMatrix, Distance, Path)
 findMinPath [] minTuple -- base case
  | minDist == (maxBound :: Int) = (minMatrix, -1, []) -- didn't found a feasable minimum path
@@ -275,7 +275,7 @@ travelSalesAux graph originCity numbCities = path
     where (matrix, dist, path) = travelSalesRec originCity (createDistMatrix graph numbCities) (createMaskMatrix graph numbCities) (maxBound :: Int) 0 1 numbCities
 
 travelSales :: RoadMap -> Path
-travelSales = undefined
+travelSales graph = travelSalesAux graph "0" (length (cities graph)) 
 
 tspBruteForce :: RoadMap -> Path
 tspBruteForce = undefined -- only for groups of 3 people; groups of 2 people: do not edit this function
@@ -291,7 +291,10 @@ gTest3 :: RoadMap -- unconnected graph
 gTest3 = [("0","1",4),("2","3",2)]
 
 gTest4 :: RoadMap
-gTest4 = [("0","1",4),("2","3",2), ("0","2",1), ("0", "3", 1), ("1", "2", 1), ("1", "3", 1)]
+gTest4 = [("0","1",3),("2","3",3), ("0","2",1), ("0", "3", 1), ("1", "2", 1), ("1", "3", 1)]
+
+gTest6 :: RoadMap
+gTest6 = [("0","1",1),("2","3",3), ("0","2",1), ("0", "3", 3), ("1", "2", 3), ("1", "3", 1), ("4", "3", 1), ("4", "2", 1)]
 
 gTest5 :: RoadMap
 gTest5 = [
