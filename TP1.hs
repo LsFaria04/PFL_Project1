@@ -2,7 +2,6 @@
 import qualified Data.List
 import qualified Data.Array
 import qualified Data.Bits
-import Distribution.Simple.Setup (ReplOptions)
 
 -- PFL 2024/2025 Practical assignment 1
 
@@ -15,7 +14,7 @@ type Distance = Int
 type RoadMap = [(City,City,Distance)]
 
 type AdjList = [(City,[(City,Distance)])]
-type AdjMatrix = Data.Array.Array (Int,Int) (Maybe Distance)
+type AdjMatrix = Data.Array.Array (Int,Int) (Distance)
 data AdjPointers = Place City [(AdjPointers, Distance)]
 
 ------------------------------------------------------------------------------
@@ -117,7 +116,7 @@ isStronglyConnectedAux graph cityList
 --Checks if a graph is strongly connected. p (i.e., if every city is reachable from every other city).
 isStronglyConnected :: RoadMap -> Bool
 isStronglyConnected graph = isStronglyConnectedAux graph (cities graph)
-------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------
 
 distanceInt :: RoadMap -> City -> City -> Distance
 distanceInt graph city1 city2
@@ -177,6 +176,79 @@ shortestPath graph c1 c2
     | otherwise = map fst (getMinCostPaths pathsWithCost (minimum (map snd pathsWithCost)))
     where pathsWithCost = calculatePathCost graph (shortestPathAux graph c1 c2 [c1] [] )
 ------------------------------------------------------------------------------
+
+--1. Usar uma matrix para guardar as distancias entre as cities (caso não haja path entre duas cidades usar valor -1)
+--3. Usar uma matrix para guardar as distancias e as cidade visitadas dessa distancia, já vistas (usar as mask e).
+--2. Considerando que começa por exemplo na cidade 1
+--3. Verificar quais cities não foram visitadas, se existir path entre essa city e a city que estamos a visitar que estamos a visitar, adicionamos a city ao path e continuamos à procura.
+--4. Caso já tenhamos 
+--4. Em cada recursão devemos verificar se a answer que obtivemos é maior ou é menor e retornar a menor.
+--5. No fim devemos dar print 
+
+type Mask = Int --new data type that to represent a mask
+
+--Converts a city to a int
+cityToInt :: City -> Int
+cityToInt city = read city :: Int 
+
+--Converts a int into a city
+intToCity :: Int -> City
+intToCity city = show city
+
+--Returns the maximum value a mask can have
+allVisited :: Int -> Mask
+allVisited len =  (1 `Data.Bits.shiftL` len) - 1 :: Int
+
+--Check if a city is already visited using a bitwise operation
+isVisited :: City -> Mask -> Bool
+isVisited city mask = mask Data.Bits..&. (1 `Data.Bits.shiftL` (cityToInt city)) /= 0
+
+--updates a mask by tagging a city as visited
+updateMask :: City -> Mask -> Mask
+updateMask city mask = mask Data.Bits..|. (1 `Data.Bits.shiftL` (cityToInt city))
+
+--updates the current distance by adding the distance between two visited cities
+updateDistance :: AdjMatrix -> City -> City-> Distance  -> Distance
+updateDistance distMatrix city1 city2 currentDist = currentDist + distMatrix Data.Array.! (cityToInt city1, cityToInt city2)
+
+--fills the matrix with the distances between the cities
+fillDistMatrix :: RoadMap -> AdjMatrix -> AdjMatrix
+fillDistMatrix [] matrix = matrix  --inserted all the distances
+fillDistMatrix graph matrix = fillDistMatrix (tail graph) newMatrix
+    where 
+        (city1,city2,dist) = head graph
+        newMatrix = matrix Data.Array.// [((cityToInt city1, cityToInt city2 ), dist), ((cityToInt city2 , cityToInt  city1), dist)]
+
+--creates the matrix that will store the distance between the cities. If two cities are not connected, the distance will be -1 (invalid)
+createDistMatrix :: RoadMap -> Int -> AdjMatrix
+createDistMatrix graph len = fillDistMatrix graph (Data.Array.array ((0, 0), (len-1, len-1)) [((i,j), -1) | i <- [0..(len-1)], j <- [0..(len-1)] ])
+
+--creates the matrix that will store the minimum distance to the inicial city from a given city and path 
+createMaskMatrix :: RoadMap -> Int -> AdjMatrix
+createMaskMatrix graph len = Data.Array.array ((0, 0), (len - 1, maxMask)) [((i,j), -1) | i <- [0..(len-1)], j <- [0..maxMask] ]
+    where maxMask = (1 `Data.Bits.shiftL` len) - 1 :: Int  -- maximum value a mask will have
+
+
+--Auxiliary function to the travelSalesRec. Verifies which cities weren't visited. Calls travelSalesRec for the cities that weren't visited. Return the city with the (AdjMatrix, Distance, Path) where distance is minimum and is diferent from -1.
+-- Stores a list with the paths found as an auxiliary value
+travelSalesRecAux :: City -> City -> AdjMatrix -> AdjMatrix -> Distance -> Distance -> Mask -> Int -> [(AdjMatrix, Distance, Path)] -> (AdjMatrix, Distance, Path)
+travelSalesRecAux originCity newCity distMatrix maskMatrix minDist currentDist mask numbCities listPaths
+    | cityToInt newCity == numbCities = (maskMatrix, -1, [])    --retorna o minimo da lista de paths ou retorna uma distancia de -1 e uma lista vazia (TODO)
+    | isVisited newCity mask == False = travelSalesRecAux originCity (intToCity (cityToInt newCity + 1)) distMatrix maskMatrix minDist currentDist mask numbCities newListPaths   -- found and unvisited city . Add a possible path to the list
+    | otherwise = travelSalesRecAux originCity (intToCity (cityToInt newCity + 1)) distMatrix maskMatrix minDist currentDist mask numbCities listPaths
+    where newListPaths = listPaths ++ [travelSalesRec newCity distMatrix maskMatrix minDist (updateDistance distMatrix originCity newCity currentDist) (updateMask newCity mask) numbCities] 
+
+
+--Recursive part of the problem. Receives the current city we are visiting, the auxiliary matrices, the minimum distance found, the visited cities mask, number of cities and return a tuple with the updated mask matrix, the distance found and the path found
+travelSalesRec :: City -> AdjMatrix -> AdjMatrix -> Distance -> Distance -> Mask -> Int -> (AdjMatrix, Distance, Path)
+travelSalesRec city distMatrix maskMatrix minDist currentDist mask numbCities
+    | mask == allVisited numbCities && distMatrix Data.Array.! (cityToInt city, 0) /= (-1) = (maskMatrix, currentDist + distMatrix Data.Array.! (cityToInt city , 0), [city]) --encontramos um caso em que todas as cities foram visitadas e existe ligação da ultima city à origem
+    | otherwise = travelSalesRecAux city "0" distMatrix maskMatrix minDist currentDist mask numbCities []
+
+-- Receives the city where we will start the search and return the possible path from that city
+travelSalesAux :: RoadMap -> City -> Int -> Path 
+travelSalesAux graph originCity numbCities = path
+    where (matrix, dist, path) = travelSalesRec originCity (createDistMatrix graph numbCities) (createMaskMatrix graph numbCities) (maxBound :: Int) 0 1 numbCities
 
 travelSales :: RoadMap -> Path
 travelSales = undefined
