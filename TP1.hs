@@ -28,8 +28,7 @@ citiesAux (city1, city2, _) list
 
 --Prints all the cities present in the graph (uses a auxiliary function to insert the  cities)
 cities :: RoadMap -> [City]
-cities [] = []
-cities graph = citiesAux (head graph) (cities (tail graph))
+cities = foldr citiesAux []
 
 ------------------------------------------------------------------------------
 --Checks if two cities are directly connected
@@ -42,6 +41,7 @@ areAdjacent graph city1 city2
     where (c1,c2,_) = head graph
 
 -------------------------------------------------------------------------------
+--Finds the distance between two cities that are conncted directly. Just a distance if they are connected or Nothing otherwise
 distance :: RoadMap -> City -> City -> Maybe Distance
 distance graph city1 city2
     | null graph = Nothing
@@ -64,17 +64,17 @@ adjacent graph city
 
 --auxiliary function that accumulates the distance on the path
 pathDistanceAux :: Maybe Distance -> Maybe Distance -> Maybe Distance
-pathDistanceAux Nothing acc = acc
+pathDistanceAux Nothing acc = Nothing
 pathDistanceAux dist Nothing = dist
 pathDistanceAux Nothing Nothing = Nothing
 pathDistanceAux (Just dist)  (Just acc) = Just (acc + dist)
 
-
+--Returns the sum of all individual distances in a path between two cities. Just a value is there are connections or Nothing otherwise
 pathDistance :: RoadMap -> Path -> Maybe Distance
 pathDistance [] _ = Nothing
 pathDistance _ [] = Nothing
 pathDistance graph path
-    | length path == 1 = Nothing
+    | length path == 1 = Just 0
     | dist /= Nothing = pathDistanceAux (pathDistance graph (tail path)) dist
     | otherwise = Nothing
     where dist = distance graph (head path) (head (tail path))
@@ -302,7 +302,7 @@ travelSalesRec city distMatrix maskMatrix currentDist mask numbCities
 
 -- Organizes the data that will be sent to the recursive part and returns the path found by the recursive part
 travelSalesDataOrganizer :: RoadMap -> City -> Int -> Path
-travelSalesDataOrganizer graph originCity numbCities 
+travelSalesDataOrganizer graph originCity numbCities
     | path /= [] = ["0"] ++ path ++ ["0"] -- found path so we add the origin/finish city
     | otherwise = path
     where (matrix, dist, path) = travelSalesRec originCity (createDistMatrix graph numbCities) (createMaskMatrix graph numbCities) 0 1 numbCities
