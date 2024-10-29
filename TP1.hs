@@ -277,7 +277,7 @@ travelSalesRecIteration originCity newCity distMatrix maskMatrix currentDist mas
         --next iteration when there is no connection from the origin to the current city
         nextIterationNoPath = travelSalesRecIteration originCity (intToCity (cityToInt newCity + 1)) distMatrix updatedMaskMatrix currentDist mask numbCities listPaths
         --next iteration when there is a connection from the origin to the current city
-        nextIterationWithPath = travelSalesRecIteration originCity (intToCity (cityToInt newCity + 1)) distMatrix maskMatrix currentDist mask numbCities newListPaths
+        nextIterationWithPath = travelSalesRecIteration originCity (intToCity (cityToInt newCity + 1)) distMatrix updatedMaskMatrix  currentDist mask numbCities newListPaths
 
 
 
@@ -303,7 +303,7 @@ travelSalesRec city distMatrix maskMatrix currentDist mask numbCities
 -- Organizes the data that will be sent to the recursive part and returns the path found by the recursive part
 travelSalesDataOrganizer :: RoadMap -> City -> Int -> Path
 travelSalesDataOrganizer graph originCity numbCities
-    | path /= [] = ["0"] ++ path ++ ["0"] -- found path so we add the origin/finish city
+    | path /= [] = [originCity] ++ path ++ [originCity] -- found path so we add the origin/finish city
     | otherwise = path
     where (matrix, dist, path) = travelSalesRec originCity (createDistMatrix graph numbCities) (createMaskMatrix graph numbCities) 0 1 numbCities
 
