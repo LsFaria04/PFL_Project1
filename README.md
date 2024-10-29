@@ -61,6 +61,8 @@ In our implementation, we decided to use two data structures with similar charac
 
 To reduce the complexity of checking visited cities, we use a bit mask with a size equal to the number of cities. To check if a city is visited, we simply verify if the bit at the city’s position is set to 1. These bit manipulation operations are much faster and more efficient than a simple search in a list.
 
+To simplify the implementation, we choose the city "0" as the origin of the path.
+
 **Algorithm Description:**
 
 We start our algorithm by creating the two previously mentioned data structures. We populate the distance matrix with the distances stored in the Roadmap and initialize the mask matrix with default values (-1 for the distance and [] for the path). These two data structures are created by the function ``travelSalesDataOrganizer``, which takes the origin city, the graph, and the number of cities in the graph as inputs.

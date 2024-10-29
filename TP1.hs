@@ -215,7 +215,7 @@ updateMaskMatrix :: AdjMatrixMask -> Mask -> City -> Distance -> Path -> AdjMatr
 updateMaskMatrix maskMatrix mask city newDist newPath
     | not (pathAlreadyFound maskMatrix mask city) = updatedMatrix   --There is no path found so we can insert a new one
     | not (pathAlreadyFound maskMatrix mask city) && (newDist < dist) = updatedMatrix -- there is already a path and the new distance was less than the old distance
-    | otherwise = maskMatrix --No chnages needed
+    | otherwise = maskMatrix --No changes needed
     where
         updatedMatrix = maskMatrix Data.Array.// [((read city, mask), (newDist,newPath))]
         (dist,path) = maskMatrix Data.Array.! (read city, mask)
