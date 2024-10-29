@@ -112,7 +112,7 @@ isStronglyConnectedAux graph cityList
     | otherwise = False
     where city = head cityList
 
-    
+
 --Checks if a graph is strongly connected. p (i.e., if every city is reachable from every other city).
 isStronglyConnected :: RoadMap -> Bool
 isStronglyConnected graph = isStronglyConnectedAux graph (cities graph)
@@ -136,7 +136,7 @@ pathDistanceIntAux dist acc = acc + dist
 pathDistanceInt :: RoadMap -> Path -> Int
 pathDistanceInt [] _ = 0
 pathDistanceInt _ [] = 0
-pathDistanceInt graph path  
+pathDistanceInt graph path
     | length path == 1 = 0
     | dist /= 0 = pathDistanceIntAux (pathDistanceInt graph (tail path)) dist
     | otherwise = 0
@@ -145,7 +145,7 @@ pathDistanceInt graph path
 
 getMinCostPaths :: [(Path,Int)] -> Int -> [(Path,Int)]
 getMinCostPaths [] _ = []
-getMinCostPaths pathsWithCost minCost 
+getMinCostPaths pathsWithCost minCost
     | minCost == cost = head pathsWithCost : getMinCostPaths (tail pathsWithCost) minCost
     | otherwise = getMinCostPaths (tail pathsWithCost) minCost
     where (path,cost) = head pathsWithCost
@@ -164,7 +164,7 @@ shortestPathAux graph current dest visited path
     explore (neighbor, _)
         | neighbor `elem` visited = []  -- Prune if already visited
         | otherwise = shortestPathAux graph neighbor dest (neighbor : visited) (current : path)
-        
+
 -- Main shortest path function
 shortestPath :: RoadMap -> City -> City -> [Path]
 shortestPath _ [] [] = []
@@ -183,11 +183,11 @@ type AdjMatrixMask = Data.Array.Array (Int,Int) (Distance, Path) --only differs 
 
 --Converts a city to a int
 cityToInt :: City -> Int
-cityToInt city = read city :: Int 
+cityToInt city = read city :: Int
 
 --Converts a int into a city
 intToCity :: Int -> City
-intToCity city = show city
+intToCity = show
 
 --Returns the maximum value a mask can have
 allVisited :: Int -> Mask
@@ -195,11 +195,11 @@ allVisited len =  (1 `Data.Bits.shiftL` len) - 1 :: Int
 
 --Check if a city is already visited using a bitwise operation
 isVisited :: City -> Mask -> Bool
-isVisited city mask = mask Data.Bits..&. (1 `Data.Bits.shiftL` (cityToInt city)) /= 0
+isVisited city mask = mask Data.Bits..&. (1 `Data.Bits.shiftL` cityToInt city) /= 0
 
 --updates a mask by tagging a city as visited
 updateMask :: City -> Mask -> Mask
-updateMask city mask = mask Data.Bits..|. (1 `Data.Bits.shiftL` (cityToInt city))
+updateMask city mask = mask Data.Bits..|. (1 `Data.Bits.shiftL` cityToInt city)
 
 -- checks if the connection between two cities exists
 hasConnection :: AdjMatrix -> City -> City -> Bool
@@ -213,8 +213,8 @@ pathAlreadyFound maskMatrix mask city = dist /= (-1)
 --updates the mask matrix if the distance found is less than the one already in the matrix
 updateMaskMatrix :: AdjMatrixMask -> Mask -> City -> Distance -> Path -> AdjMatrixMask
 updateMaskMatrix maskMatrix mask city newDist newPath
-    | pathAlreadyFound maskMatrix mask city == False = updatedMatrix   --There is no path found so we can insert a new one
-    | (pathAlreadyFound maskMatrix mask city == False) && (newDist < dist) = updatedMatrix -- there is already a path and the new distance was less than the old distance
+    | not (pathAlreadyFound maskMatrix mask city) = updatedMatrix   --There is no path found so we can insert a new one
+    | not (pathAlreadyFound maskMatrix mask city) && (newDist < dist) = updatedMatrix -- there is already a path and the new distance was less than the old distance
     | otherwise = maskMatrix --No chnages needed
     where
         updatedMatrix = maskMatrix Data.Array.// [((read city, mask), (newDist,newPath))]
@@ -228,7 +228,7 @@ updateDistance distMatrix city1 city2 currentDist = currentDist + distMatrix Dat
 fillDistMatrix :: RoadMap -> AdjMatrix -> AdjMatrix
 fillDistMatrix [] matrix = matrix  --inserted all the distances
 fillDistMatrix graph matrix = fillDistMatrix (tail graph) newMatrix
-    where 
+    where
         (city1,city2,dist) = head graph
         newMatrix = matrix Data.Array.// [((cityToInt city1, cityToInt city2 ), dist), ((cityToInt city2 , cityToInt  city1), dist)]
 
@@ -247,10 +247,10 @@ findMinPath [] minTuple -- base case
  | minDist == (maxBound :: Int) = (minMatrix, -1, []) -- didn't found a feasable minimum path
  | otherwise = minTuple
  where (minMatrix, minDist, minPath) = minTuple
-findMinPath pathList minTuple  
+findMinPath pathList minTuple
     | (dist < minDist) && (dist /= (-1)) = findMinPath (tail pathList) (mMatrix, dist, path)
     | otherwise =  findMinPath (tail pathList) (minMatrix, minDist, minPath)
-    where 
+    where
         (mMatrix, dist, path) = head pathList
         (minMatrix, minDist, minPath) = minTuple
 
@@ -261,26 +261,26 @@ findMinPath pathList minTuple
 travelSalesRecIteration :: City -> City -> AdjMatrix -> AdjMatrixMask -> Distance -> Mask -> Int -> [(AdjMatrixMask, Distance, Path)] -> (AdjMatrixMask, Distance, Path)
 travelSalesRecIteration originCity newCity distMatrix maskMatrix currentDist mask numbCities listPaths
     | cityToInt newCity == numbCities = findMinPath listPaths (maskMatrix, maxBound :: Int, [])  --iterated througth all the cities. Return the minimum path found in the iteration
-    | (isVisited newCity mask == False) && (hasConnection distMatrix originCity newCity) = nextIterationWithPath
+    | not (isVisited newCity mask) && hasConnection distMatrix originCity newCity = nextIterationWithPath
     | otherwise = nextIterationNoPath
-    where 
+    where
         --updates the current distance to be used in the next recursive call
         updatedDistance = updateDistance distMatrix originCity newCity currentDist
         --updates the visited cities mask to be used in the next recursive call
-        updatedMask =  updateMask newCity mask 
+        updatedMask =  updateMask newCity mask
         -- call again travelSalesRec to find a path from the unvisited city (continues the recursion)
         (mMatrix, dist, path) = travelSalesRec newCity distMatrix maskMatrix updatedDistance updatedMask numbCities
         --Updates the mask matrix with path found
-        updatedMaskMatrix = updateMaskMatrix maskMatrix mask newCity dist path 
+        updatedMaskMatrix = updateMaskMatrix maskMatrix mask newCity dist path
         -- adds the unvisited city to the path found and adds a new path to the paths list
-        newListPaths = listPaths ++ [(mMatrix, dist, newCity : path)] 
+        newListPaths = listPaths ++ [(mMatrix, dist, newCity : path)]
         --next iteration when there is no connection from the origin to the current city
-        nextIterationNoPath = travelSalesRecIteration originCity (intToCity (cityToInt newCity + 1)) distMatrix updatedMaskMatrix currentDist mask numbCities listPaths 
+        nextIterationNoPath = travelSalesRecIteration originCity (intToCity (cityToInt newCity + 1)) distMatrix updatedMaskMatrix currentDist mask numbCities listPaths
         --next iteration when there is a connection from the origin to the current city
         nextIterationWithPath = travelSalesRecIteration originCity (intToCity (cityToInt newCity + 1)) distMatrix maskMatrix currentDist mask numbCities newListPaths
 
-        
-        
+
+
 
 
 --Recursive part of the problem. 
@@ -289,25 +289,27 @@ travelSalesRecIteration originCity newCity distMatrix maskMatrix currentDist mas
 travelSalesRec :: City -> AdjMatrix -> AdjMatrixMask -> Distance -> Mask -> Int -> (AdjMatrixMask, Distance, Path)
 travelSalesRec city distMatrix maskMatrix currentDist mask numbCities
     -- found a feasable path (all the cities where visited and there is a connection between the last city and the inicial city)
-    | mask == allVisited numbCities && (hasConnection distMatrix city "0") = returnTuple
+    | mask == allVisited numbCities && hasConnection distMatrix city "0" = returnTuple
     --we already found a path from this city when we visited the cities tagged in the mask
-    | pathAlreadyFound maskMatrix mask city == True = (maskMatrix, distFound, pathFound)
+    | pathAlreadyFound maskMatrix mask city = (maskMatrix, distFound, pathFound)
     -- Continues to search a path (calls the iteration function to find unvisited cities)
     | otherwise = travelSalesRecIteration city "0" distMatrix maskMatrix currentDist mask numbCities []
-    where 
+    where
         -- Tuple that will be returned with the updated maskmatrix, current distance and path
         returnTuple = (maskMatrix, currentDist + distMatrix Data.Array.! (cityToInt city , 0), [])
         --gets the distance and path already found by another iteration/recursion from the maskMatrix
-        (distFound, pathFound) = maskMatrix Data.Array.! (read city, mask) 
+        (distFound, pathFound) = maskMatrix Data.Array.! (read city, mask)
 
 -- Organizes the data that will be sent to the recursive part and returns the path found by the recursive part
-travelSalesDataOrganizer :: RoadMap -> City -> Int -> Path 
-travelSalesDataOrganizer graph originCity numbCities = path
+travelSalesDataOrganizer :: RoadMap -> City -> Int -> Path
+travelSalesDataOrganizer graph originCity numbCities 
+    | path /= [] = ["0"] ++ path ++ ["0"] -- found path so we add the origin/finish city
+    | otherwise = path
     where (matrix, dist, path) = travelSalesRec originCity (createDistMatrix graph numbCities) (createMaskMatrix graph numbCities) 0 1 numbCities
 
 -- Executes the TSP algorithm with the starting city being the city "0"
 travelSales :: RoadMap -> Path
-travelSales graph = travelSalesDataOrganizer graph "0" (length (cities graph)) 
+travelSales graph = travelSalesDataOrganizer graph "0" (length (cities graph))
 
 -----------------------------------------------------------------------------------------------------------------------------
 
