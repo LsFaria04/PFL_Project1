@@ -118,6 +118,7 @@ isStronglyConnected :: RoadMap -> Bool
 isStronglyConnected graph = isStronglyConnectedAux graph (cities graph)
 -------------------------------------------------------------------------------------------------------
 
+--Calculates the distance between two cities but returns Distance instead of Maybe Distance
 distanceInt :: RoadMap -> City -> City -> Distance
 distanceInt graph city1 city2
     | null graph = 0
@@ -126,14 +127,15 @@ distanceInt graph city1 city2
     | otherwise = distanceInt (tail graph) city1 city2
     where (c1,c2,dist) = head graph
 
+--Accumulator to calculate the distance in a path but returns Distance instead of Maybe Distance
 pathDistanceIntAux :: Distance -> Distance -> Distance
 pathDistanceIntAux 0 acc = acc
 pathDistanceIntAux dist 0 = dist
 pathDistanceIntAux 0 0 = 0
 pathDistanceIntAux dist acc = acc + dist
 
-
-pathDistanceInt :: RoadMap -> Path -> Int
+--Calculates the distance in a path but returns Distance instead of Maybe Distance
+pathDistanceInt :: RoadMap -> Path -> Distance
 pathDistanceInt [] _ = 0
 pathDistanceInt _ [] = 0
 pathDistanceInt graph path
@@ -143,38 +145,40 @@ pathDistanceInt graph path
     where dist = distanceInt graph (head path) (head (tail path))
 
 
-getMinCostPaths :: [(Path,Int)] -> Int -> [(Path,Int)]
-getMinCostPaths [] _ = []
-getMinCostPaths pathsWithCost minCost
-    | minCost == cost = head pathsWithCost : getMinCostPaths (tail pathsWithCost) minCost
-    | otherwise = getMinCostPaths (tail pathsWithCost) minCost
-    where (path,cost) = head pathsWithCost
-
-calculatePathCost :: RoadMap -> [Path] -> [(Path,Int)]
-calculatePathCost _ [] = []
-calculatePathCost graph paths = (head paths , pathDistanceInt graph (head paths)) : calculatePathCost graph (tail paths)
-
-
-shortestPathAux :: RoadMap -> City -> City -> [City] -> Path -> [Path]
-shortestPathAux graph current dest visited path
-    | current == dest = [reverse (current:path)]  -- Base case: reached destination
-    | otherwise = concatMap explore neighbors  -- Explore all valid neighbors
+-- Auxiliary function for shortestPath
+-- Iterates through the start city and it's neighbours, keeps the current path distance and a list of already visited cities
+-- Prunes the path if it costs already more than the minCost path in the result, otherwhise clears the result and puts the new minCost path
+-- At the end returns the result with only the paths with minCost in the format of (Distance, [Path])
+shortestPathAux :: RoadMap -> City -> City -> [City] -> Path -> Distance -> (Distance, [Path]) -> (Distance, [Path])
+shortestPathAux graph current dest visited path currentCost (minCost, paths)
+    | current == dest =
+        let newCost = pathDistanceInt graph (reverse (current : path))
+        in if newCost < minCost
+           then (newCost, [reverse (current : path)])  -- New best path with a lower cost
+           else if newCost == minCost
+                then (minCost, reverse (current : path) : paths)  -- Path with the same minimum cost
+                else (minCost, paths)  -- Discard this path as it is more costly
+    | otherwise = foldl explore (minCost, paths) neighbors
   where
-    neighbors = adjacent graph current  -- Get neighbors of the current city
-    explore (neighbor, _)
-        | neighbor `elem` visited = []  -- Prune if already visited
-        | otherwise = shortestPathAux graph neighbor dest (neighbor : visited) (current : path)
+    neighbors = adjacent graph current
+    explore (bestCost, bestPaths) (neighbor, edgeCost)
+        | neighbor `elem` visited = (bestCost, bestPaths)  -- Skip already visited nodes
+        | currentCost + edgeCost > bestCost = (bestCost, bestPaths)  -- Prune if the path exceeds current min cost
+        | otherwise = shortestPathAux graph neighbor dest (neighbor : visited) (current : path) (currentCost + edgeCost) (bestCost, bestPaths)
 
--- Main shortest path function
+-- Main shortestPath function
+-- Calls shortestPathAux for the recursive iteration
+-- Only returns the paths from shortestPathAux [Path]
 shortestPath :: RoadMap -> City -> City -> [Path]
 shortestPath _ [] [] = []
 shortestPath _ [] c2 = [[c2]]
 shortestPath _ c1 [] = [[c1]]
 shortestPath graph c1 c2
     | areAdjacent graph c1 c2 = [[c1, c2]]  -- Directly adjacent case
-    | null pathsWithCost = []
-    | otherwise = map fst (getMinCostPaths pathsWithCost (minimum (map snd pathsWithCost)))
-    where pathsWithCost = calculatePathCost graph (shortestPathAux graph c1 c2 [c1] [] )
+    | otherwise =
+        let (_, paths) = shortestPathAux graph c1 c2 [c1] [] 0 (maxBound, [])  -- Initialize minCost to maxBound
+        in paths
+
 ------------------------------------------------------------------------------
 
 --data types specifically designed for the tsp problem
