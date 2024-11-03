@@ -173,9 +173,7 @@ shortestPath :: RoadMap -> City -> City -> [Path]
 shortestPath _ [] [] = []
 shortestPath _ [] c2 = [[c2]]
 shortestPath _ c1 [] = [[c1]]
-shortestPath graph c1 c2
-    | areAdjacent graph c1 c2 = [[c1, c2]]  -- Directly adjacent case
-    | otherwise =
+shortestPath graph c1 c2 =
         let (_, paths) = shortestPathAux graph c1 c2 [c1] [] 0 (maxBound, [])  -- Initialize minCost to maxBound
         in paths
 

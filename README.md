@@ -63,11 +63,17 @@ Path Distance Calculation Over an Entire Path: The ``pathDistanceInt`` function 
 Recursive Shortest Path Search with Pruning: The ``shortestPathAux`` function performs a depth-first search from a starting city to a destination city, keeping track of the path, cumulative cost, and a list of visited cities to prevent revisiting. At each step:
 
 If the destination city is reached, it evaluates the path's cost and updates the result based on the minCost so far:
-If the path cost is lower than the current minCost, it updates the minCost and clears previous paths, setting this as the new minimum path.
-If the path cost matches the current minCost, it appends the new path to the existing results.
-If still searching, it explores neighboring cities (adjacent cities in RoadMap) recursively, using explore to check each neighbor.
-If a path exceeds minCost, it is pruned to avoid unnecessary computation.
+
+- If the path cost is lower than the current minCost, it updates the minCost and clears previous paths, setting this as the new minimum path.
+
+- If the path cost matches the current minCost, it appends the new path to the existing results.
+
+- If still searching, it explores neighboring cities (adjacent cities in RoadMap) recursively, using explore to check each neighbor.
+
+- If a path exceeds minCost, it is pruned to avoid unnecessary computation.
+
 The final result of ``shortestPathAux`` is a tuple of the minimum path cost and a list of all paths with this cost.
+
 Main Shortest Path Function: The ``shortestPath`` function initializes the search by calling ``shortestPathAux`` with starting parameters, including an initial minCost set to maxBound and an empty list of paths. It also includes cases for special conditions, such as if the two cities are directly connected, where it immediately returns the direct path. The primary result returned by ``shortestPath`` is a list of paths that yield the minimum cost between the two specified cities.
 
 
