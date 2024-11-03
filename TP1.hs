@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
 import qualified Data.List
 import qualified Data.Array
 import qualified Data.Bits
@@ -66,7 +65,6 @@ adjacent graph city
 pathDistanceAux :: Maybe Distance -> Maybe Distance -> Maybe Distance
 pathDistanceAux Nothing acc = Nothing
 pathDistanceAux dist Nothing = dist
-pathDistanceAux Nothing Nothing = Nothing
 pathDistanceAux (Just dist)  (Just acc) = Just (acc + dist)
 
 --Returns the sum of all individual distances in a path between two cities. Just a value is there are connections or Nothing otherwise
@@ -131,7 +129,6 @@ distanceInt graph city1 city2
 pathDistanceIntAux :: Distance -> Distance -> Distance
 pathDistanceIntAux 0 acc = acc
 pathDistanceIntAux dist 0 = dist
-pathDistanceIntAux 0 0 = 0
 pathDistanceIntAux dist acc = acc + dist
 
 --Calculates the distance in a path but returns Distance instead of Maybe Distance
@@ -262,26 +259,17 @@ findMinPath pathList minTuple
 -- Return the path in the format (AdjMatrix, Distance, Path) where distance is minimum and is diferent from -1.
 travelSalesRecIteration :: City -> City -> AdjMatrix -> AdjMatrixMask -> Distance -> Mask -> Int -> [(AdjMatrixMask, Distance, Path)] -> (AdjMatrixMask, Distance, Path)
 travelSalesRecIteration originCity newCity distMatrix maskMatrix currentDist mask numbCities listPaths
-    | cityToInt newCity == numbCities = findMinPath listPaths (maskMatrix, maxBound :: Int, [])  --iterated througth all the cities. Return the minimum path found in the iteration
-    | not (isVisited newCity mask) && hasConnection distMatrix originCity newCity = nextIterationWithPath
-    | otherwise = nextIterationNoPath
+    | cityToInt newCity == numbCities = findMinPath listPaths (maskMatrix, maxBound :: Int, [])                 -- iterated througth all the cities. Return the minimum path found in the iteration
+    | not (isVisited newCity mask) && hasConnection distMatrix originCity newCity = nextIterationWithPath       -- found a unvisited city that has a path to the current city. Continue the recursion
+    | otherwise = nextIterationNoPath                                                                           -- the city has already visited or didn't have a a path to the current city. Continue the search for an unvisited city
     where
-        --updates the current distance to be used in the next recursive call
         updatedDistance = updateDistance distMatrix originCity newCity currentDist
-        --updates the visited cities mask to be used in the next recursive call
         updatedMask =  updateMask newCity mask
-        -- call again travelSalesRec to find a path from the unvisited city (continues the recursion)
         (mMatrix, dist, path) = travelSalesRec newCity distMatrix maskMatrix updatedDistance updatedMask numbCities
-        --Updates the mask matrix with path found
         updatedMaskMatrix = updateMaskMatrix maskMatrix mask newCity dist path
-        -- adds the unvisited city to the path found and adds a new path to the paths list
         newListPaths = listPaths ++ [(mMatrix, dist, newCity : path)]
-        --next iteration when there is no connection from the origin to the current city
         nextIterationNoPath = travelSalesRecIteration originCity (intToCity (cityToInt newCity + 1)) distMatrix updatedMaskMatrix currentDist mask numbCities listPaths
-        --next iteration when there is a connection from the origin to the current city
         nextIterationWithPath = travelSalesRecIteration originCity (intToCity (cityToInt newCity + 1)) distMatrix updatedMaskMatrix  currentDist mask numbCities newListPaths
-
-
 
 
 
@@ -290,17 +278,13 @@ travelSalesRecIteration originCity newCity distMatrix maskMatrix currentDist mas
 --Returns a tuple with the updated mask matrix, the distance found and the path found.
 travelSalesRec :: City -> AdjMatrix -> AdjMatrixMask -> Distance -> Mask -> Int -> (AdjMatrixMask, Distance, Path)
 travelSalesRec city distMatrix maskMatrix currentDist mask numbCities
-    -- found a feasable path (all the cities where visited and there is a connection between the last city and the inicial city)
-    | mask == allVisited numbCities && hasConnection distMatrix city "0" = returnTuple
-    --we already found a path from this city when we visited the cities tagged in the mask
-    | pathAlreadyFound maskMatrix mask city = (maskMatrix, distFound, pathFound)
-    -- Continues to search a path (calls the iteration function to find unvisited cities)
-    | otherwise = travelSalesRecIteration city "0" distMatrix maskMatrix currentDist mask numbCities []
+    | mask == allVisited numbCities && hasConnection distMatrix city "0" = returnTuple                      -- found a path
+    | pathAlreadyFound maskMatrix mask city = (maskMatrix, distFound, pathFound)                            -- path already previously
+    | otherwise = travelSalesRecIteration city "0" distMatrix maskMatrix currentDist mask numbCities []     -- No Path found. Continue the search
     where
-        -- Tuple that will be returned with the updated maskmatrix, current distance and path
         returnTuple = (maskMatrix, currentDist + distMatrix Data.Array.! (cityToInt city , 0), [])
-        --gets the distance and path already found by another iteration/recursion from the maskMatrix
         (distFound, pathFound) = maskMatrix Data.Array.! (read city, mask)
+
 
 -- Organizes the data that will be sent to the recursive part and returns the path found by the recursive part
 travelSalesDataOrganizer :: RoadMap -> City -> Int -> Path

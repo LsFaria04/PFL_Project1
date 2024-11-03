@@ -48,7 +48,7 @@ Group 3, Class 4
 
 ## Shortest Path Implementation
 
-Our implementation of the Shortest Path Problem uses a brute-force with pruning approach. This method doesn't utilize any advanced data structures like priority queues, hash tables or graphs represented as adjacency lists or matrices.
+Our implementation of the Shortest Path Problem uses a backtracking with pruning approach. This method doesn't utilize any advanced data structures like priority queues, hash tables or graphs represented as adjacency lists or matrices.
 
 **Algorithm Description:**
 
