@@ -1,5 +1,7 @@
 # PFL Project 1
 
+**Final Grade:** 18.5/20
+
 ## Group Members
 
 Group 3, Class 4
