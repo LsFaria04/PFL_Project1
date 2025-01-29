@@ -1,4 +1,4 @@
-# PFL Project 1
+# PFL Project 1 - Graph Problems solved using Haskell
 
 **Final Grade:** 18.5/20
 
